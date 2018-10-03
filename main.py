@@ -18,8 +18,9 @@ class GUIBoard(ttk.Frame):
         self.board = board_manager.Board(size)
         self.graphic_board = []
         ttk.Label(text='Player: X').grid(row=0, column=0, sticky='w')
+        self.AI = AI.semi_AI3(size)
         if random.randint(0, 1):
-            self.board.set(*AI.semi_AI3(self.board, 'O', 'X'), 'O')
+            self.board.set(*self.AI.get(self.board, 'O', 'X'), 'O')
         for row in range(size):
             new_row = []
             for column in range(size):
@@ -33,7 +34,7 @@ class GUIBoard(ttk.Frame):
             winner = self.board.winner()
             self.refresh_everything()
             if not self.board.full():
-                self.board.set(*AI.semi_AI3(self.board, 'O', 'X'), 'O')
+                self.board.set(*self.AI.get(self.board, 'O', 'X'), 'O')
     def refresh_everything(self):
         for row in range(self.board.size):
             for column in range(self.board.size):
@@ -41,7 +42,8 @@ class GUIBoard(ttk.Frame):
         if self.board.winner() or self.board.full():
             messagebox.Message(message='Winner is %s' % self.board.winner()).show()
             self.board = board_manager.Board(self.board.size)
-        self.after(10, self.refresh_everything)
+            self.AI = AI.semi_AI3(self.board.size)
+        self.after(100, self.refresh_everything)
 gui = GUIBoard()
 gui.grid()
 gui.mainloop()

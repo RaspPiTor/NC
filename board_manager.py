@@ -6,8 +6,12 @@ class Board():
         if self.board[row * self.size + column] == ' ':
             self.board[row * self.size + column] = player
             return True
-        else:
-            return False
+    def quick_set(self, i, player):
+        if self.board[i] == ' ':
+            self.board[i] = player
+            return True
+    def can_set(self, i):
+        return self.board[i] == ' '
     def get(self, row, column):
         return self.board[row * self.size + column]
     def winner(self):
