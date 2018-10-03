@@ -13,7 +13,7 @@ class ButtonHandler():
         self.function(*self.parameters)
 
 class GUIBoard(ttk.Frame):
-    def __init__(self, master=None, size=3):
+    def __init__(self, master=None, size=8):
         ttk.Frame.__init__(self)
         self.board = board_manager.Board(size)
         self.graphic_board = []
