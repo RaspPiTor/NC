@@ -18,8 +18,8 @@ class Board():
         size = self.size
         board = self.board
         for row in range(0, size ** 2, size):
-            if board[row] != ' ':
-                if all(i == board[row] for i in board[row:row+size]):
+            if ' ' not in board[row:row+size]:
+                if 'X' not in board[row:row+size] or 'O' not in board[row:row+size]:
                     return board[row]
         for c in range(size):
             if board[c] != ' ':
