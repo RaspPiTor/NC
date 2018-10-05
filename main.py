@@ -19,21 +19,21 @@ class ThreadedMatchManager(threading.Thread):
         q_display = self.q_display
         command = ['reset']
         while True:
-            if command[0] == 'reset':
+            if command[0] == 'p':
+                row, column = command[1:]
+                if board.set(row, column, 'X'):
+                    q_display.put(('p', row, column, 'X'))
+                    if not board.full():
+                        ai_row, ai_column = ai.get(board, 'O', 'X')
+                        board.set(ai_row, ai_column, 'O')
+                        q_display.put(('p', ai_row, ai_column, 'O'))
+            elif command[0] == 'reset':
                 board = board_manager.Board(size=self.size)
                 ai = AI.semi_AI3(self.size)
                 if random.randint(0, 1):
                     ai_row, ai_column = ai.get(board, 'O', 'X')
                     board.set(ai_row, ai_column, 'O')
-                    q_display.put(('put', ai_row, ai_column, 'O'))
-            elif command[0] == 'put':
-                row, column = command[1:]
-                if board.set(row, column, 'X'):
-                    q_display.put(('put', row, column, 'X'))
-                    if not board.full():
-                        ai_row, ai_column = ai.get(board, 'O', 'X')
-                        board.set(ai_row, ai_column, 'O')
-                        q_display.put(('put', ai_row, ai_column, 'O'))
+                    q_display.put(('p', ai_row, ai_column, 'O'))
             else:
                 print('Unknown command', command)
             if board.winner() or board.full():
@@ -70,14 +70,14 @@ class GUIBoard(ttk.Frame):
                 new_row.append(ttk.Button(self, command=command, width=2))
                 new_row[-1].grid(row=row+1, column=column)
             self.graphic_board.append(new_row)
-        self.after(10, self.refresh_everything)
+        self.refresh_everything()
     def button_pressed(self, row, column):
-        self.q_pmoves.put(('put', row, column))
+        self.q_pmoves.put(('p', row, column))
     def refresh_everything(self):
         try:
             while True:
                 command = self.q_display.get(0)
-                if command[0] == 'put':
+                if command[0] == 'p':
                     row, column, player= command[1:]
                     self.graphic_board[row][column]['text'] = player
                 elif command[0] == 'end_game':
