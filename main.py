@@ -8,14 +8,37 @@ import board_manager
 import AI
 
 import threading
-class ThreadedBoardHandler(threading.Thread):
-    def __init__(self, q_pmoves, q_display, board):
+class ThreadedMatchManager(threading.Thread):
+    def __init__(self, q_pmoves, q_display, size=3):
+        threading.Thread.__init__(self)
         self.q_pmoves = q_pmoves
         self.q_display = q_display
-        self.board = board
+        self.size = size
     def run(self):
+        q_pmoves = self.q_pmoves
+        q_display = self.q_display
+        command = ['reset']
         while True:
-            pass
+            if command[0] == 'reset':
+                board = board_manager.Board(size=self.size)
+                ai = AI.semi_AI3(self.size)
+                if random.randint(0, 1):
+                    ai_row, ai_column = ai.get(board, 'O', 'X')
+                    board.set(ai_row, ai_column, 'O')
+                    q_display.put(('put', ai_row, ai_column, 'O'))
+            elif command[0] == 'put':
+                row, column = command[1:]
+                if board.set(row, column, 'X'):
+                    q_display.put(('put', row, column, 'X'))
+                    if not board.full():
+                        ai_row, ai_column = ai.get(board, 'O', 'X')
+                        board.set(ai_row, ai_column, 'O')
+                        q_display.put(('put', ai_row, ai_column, 'O'))
+            else:
+                print('Unknown command', command)
+            if board.winner() or board.full():
+                q_display.put(('end_game', board.winner()))
+            command = q_pmoves.get()
 
 
 class ButtonHandler():
@@ -28,13 +51,18 @@ class ButtonHandler():
 class GUIBoard(ttk.Frame):
     def __init__(self, master=None, size=30):
         ttk.Frame.__init__(self)
-        self.board = board_manager.Board(size)
+        self.size = size
         self.graphic_board = []
         ttk.Label(self, text='Player: X').grid(row=0, column=0, columnspan=4)
         ttk.Button(self, text='Reset',
-                   command=self.reset).grid(row=0,column=1, columnspan=8)
-        self.AI = AI.semi_AI3(size)
-        self.queue = queue.Queue()
+                   command=self.reset).grid(row=0,column=4, columnspan=8)
+        
+        self.q_pmoves = queue.Queue()
+        self.q_display = queue.Queue()
+        self.threaded_match_manager = ThreadedMatchManager(self.q_pmoves,
+                                                           self.q_display,
+                                                           size)
+        self.threaded_match_manager.start()
         for row in range(size):
             new_row = []
             for column in range(size):
@@ -42,38 +70,27 @@ class GUIBoard(ttk.Frame):
                 new_row.append(ttk.Button(self, command=command, width=2))
                 new_row[-1].grid(row=row+1, column=column)
             self.graphic_board.append(new_row)
-        if random.randint(0, 1):
-            ai_row, ai_column = self.AI.get(self.board, 'O', 'X')
-            self.board.set(ai_row, ai_column, 'O')
-            self.graphic_board[ai_row][ai_column]['text'] = 'O'
         self.after(10, self.refresh_everything)
     def button_pressed(self, row, column):
-        self.queue.put((row, column))
-        print(row, column)
+        self.q_pmoves.put(('put', row, column))
     def refresh_everything(self):
-        if self.board.winner() or self.board.full():
-            messagebox.Message(message='Winner is %s' % self.board.winner()).show()
-            self.reset()
-        else:
-            try:
-                row, column = self.queue.get(0)
-                if self.board.set(row, column, 'X'):
-                    self.graphic_board[row][column]['text'] = 'X'
-                    self.update()
-                    if not self.board.full():
-                        ai_row, ai_column = self.AI.get(self.board, 'O', 'X')
-                        self.board.set(ai_row, ai_column, 'O')
-                        self.graphic_board[ai_row][ai_column]['text'] = 'O'
-            except queue.Empty:
-                pass
-        self.after(10, self.refresh_everything)
+        try:
+            while True:
+                command = self.q_display.get(0)
+                if command[0] == 'put':
+                    row, column, player= command[1:]
+                    self.graphic_board[row][column]['text'] = player
+                elif command[0] == 'end_game':
+                    messagebox.Message(message='Winner is %s' % command[1]).show()
+                    self.reset()
+        except queue.Empty:
+            pass
+        self.after(100, self.refresh_everything)
     def reset(self):
-        self.board = board_manager.Board(self.board.size)
-        self.AI = AI.semi_AI3(self.board.size)
-        for row in range(self.board.size):
-            for column in range(self.board.size):
+        self.q_pmoves.put(('reset', ))
+        for row in range(self.size):
+            for column in range(self.size):
                 self.graphic_board[row][column]['text'] = ' '
-        self.queue = queue.Queue()
 gui = GUIBoard()
 gui.grid()
 gui.mainloop()
